@@ -67,6 +67,27 @@ Extract 5-15 concrete promises from docs, UI copy, tests, types, and code struct
 
 This checklist drives the rest of the audit.
 
+### 1.4 Identify the domain model and relationship contract
+
+For features that model real-world roles, legal/medical/financial/accounting concepts, permissions,
+entitlements, ownership, workflow state, or regulated user promises, explicitly map the domain
+relationships before trusting the UI.
+
+Write down:
+- Primary entities: the things that actually exist in the user's world.
+- Roles vs entities: which labels are attributes, which are standalone records, and which are
+  relationships between records.
+- Required relationships: ownership, representation, client/opponent, payer/beneficiary,
+  guardian/dependent, provider/patient, admin/member, source/derived output, or similar.
+- Perspective: who the product is acting for, speaking to, optimizing for, or protecting.
+- Neutral/third-party actors: courts, witnesses, auditors, support staff, regulators, processors,
+  or observers that must not be treated as ordinary primary entities.
+- Valid unresolved states: what can be draft/unknown, what must block readiness/export/action, and
+  what must be marked clearly to the user.
+
+If the feature collapses different real-world concepts into one enum, table, picker, string field,
+or generic "party/user/item" list, treat that as a high-risk area until proven otherwise.
+
 ---
 
 ## Phase 2: Trace Real Execution Path
@@ -80,6 +101,9 @@ For each entry point:
 4. Identify stale/cache/fallback behavior.
 5. Identify permissions, entitlements, feature flags, provider state, and environment requirements.
 6. Identify recovery path when something fails.
+7. Trace the same value through every trust boundary: creation, edit screens, persistence,
+   validation, derived status, prompts/AI calls, background jobs, exports/reports, audit logs,
+   readiness/proof fingerprints, and tests.
 
 Use `rg` aggressively. Read immediate callers and consumers before making claims.
 
@@ -88,6 +112,8 @@ Useful searches:
 rg -n "featureName|screen title|button text|field_name|apiEndpoint" .
 rg -n "catch|fallback|default|stale|isLoading|setTimeout|retry|TODO|FIXME|mock|placeholder" relevant/path
 rg -n "enabled|flag|premium|entitlement|permission|auth|role|policy" relevant/path
+rg -n "role|type|kind|status|relationship|owner|client|side|represents|represented|belongsTo|parentId|sourceId" relevant/path
+rg -n "fingerprint|proof|ready|complete|validated|export|manifest|prompt|AI|copyBlock|audit" relevant/path
 ```
 
 ---
@@ -151,6 +177,72 @@ Team would not know feature is failing:
 - No metric for recommendation generation, notification scheduling, sync failure, entitlement mismatch, or stale-data display.
 - Errors include sensitive data or omit diagnostic context.
 
+### 3.7 Domain-model and relationship gaps
+
+The feature stores data, but the model cannot represent the user's real situation:
+- Real-world relationships are flattened into labels: "solicitor", "barrister", "witness",
+  "court", "client", "admin", "guardian", or "provider" are stored as peers of the thing they
+  should relate to.
+- The UI asks for a role but not "for whom", "owned by whom", "acting for whom", "paid by whom",
+  "approved by whom", or "source for what".
+- The model has an optional relationship field but no validation that the referenced record exists,
+  has the right type, or belongs to the same scope.
+- A neutral or third-party actor can be treated as an adversary, customer, owner, patient, payer,
+  account holder, or other primary actor.
+- Draft/unresolved records look complete, active, ready, or safe.
+- Legacy/default records are silently classified as "other" without a review surface before
+  downstream use.
+
+This is a feature gap even when CRUD works and the database schema is internally consistent.
+
+### 3.8 Perspective and side-of-record gaps
+
+The feature cannot answer whose side it is on:
+- The app stores a client/user/account/member but does not link that person/entity to the thing the
+  feature is acting on.
+- The product collects persona, role, or onboarding context but does not connect it to the feature's
+  source of truth.
+- Recommendations, drafts, alerts, summaries, or workflow actions omit whether they are for the user,
+  the counterparty, a dependent, a client, an admin, or a neutral reviewer.
+- "Supporting", "opposing", "recommended", "risk", "ready", or "complete" is displayed without
+  specifying the relevant perspective.
+- The same data could be correct for one side and harmful for another.
+
+For legal/litigation workflows specifically, audit claimant/defendant or equivalent sides, client
+side, opponent side, solicitor/attorney, barrister/advocate/counsel, witness/expert, court/tribunal,
+and instructing relationships as separate concepts.
+
+### 3.9 Derived trust-surface gaps
+
+The feature's raw data may be wrong or incomplete, but derived surfaces still treat it as safe:
+- Completeness or readiness checks count "any value present" instead of "valid value for the
+  user's workflow".
+- Proofs, fingerprints, cache keys, ETags, or stale-state invalidation omit semantically material
+  fields.
+- Exports, manifests, reports, emails, copy blocks, or audit logs flatten structured relationships
+  into a comma-separated list or omit them entirely.
+- AI prompts, recommendations, scoring, or automation receive generic text but not the structured
+  context required to produce safe output.
+- Background jobs and generated artifacts persist metadata after generation, but did not provide
+  that metadata to the generator.
+
+When a feature has a trust claim ("ready", "GO", "reviewed", "client-safe", "court-ready",
+"active", "verified", "synced", "complete"), trace every field that should invalidate that claim.
+
+### 3.10 Test-suite semantic gaps
+
+Passing tests can hide a broken feature contract:
+- Tests assert labels, serialization, CRUD, or happy-path rendering but not real-world validity.
+- Tests prove a relationship field round-trips but not that it is required, editable, role-correct,
+  or used downstream.
+- Tests assert "complete" or "ready" from minimal fixtures that would be invalid in a real workflow.
+- Prompt tests check generic instructions/source bundles but not user-specific context.
+- Export/proof tests check files exist or hashes change for obvious fields while omitting
+  relationship, perspective, permission, entitlement, or context fields.
+
+If focused tests pass while the audited promise is still false, report that as evidence: "the suite
+accepts the broken contract." Recommend the smallest regression tests that would fail today.
+
 ---
 
 ## Phase 4: Verify Before Reporting
@@ -163,6 +255,11 @@ Verification options:
 - Browser/simulator/device proof for UI, notifications, native health, payments, auth, routing, and background behavior.
 - Live database/API inspection only through sanctioned project tools and only when needed.
 - Harness/readiness commands when repository guidance requires them.
+- Negative/semantic proof: construct or identify an invalid real-world state, then verify whether
+  the feature accepts it, displays it as complete/ready, sends it into prompts/jobs, or exports it
+  without warnings.
+- Invalidation proof: change a semantically material relationship/context field and verify whether
+  caches, readiness, proofs, generated artifacts, and exports become stale or blocked.
 
 If verification is impossible, label finding as "needs runtime proof" and explain exactly what proof is missing.
 
@@ -212,6 +309,11 @@ If updating an existing audit, preserve prior findings and add status: `open`, `
 |------------|---------------|-------|
 | [capability] | working / partial / broken / unverified | [details] |
 
+## Domain Model / Trust Surface Matrix
+| Concept or relationship | Captured at input? | Persisted? | Editable later? | Validated? | Used in prompts/jobs? | Included in proof/export? |
+|-------------------------|--------------------|------------|-----------------|------------|-----------------------|---------------------------|
+| [entity/relationship] | yes/no/partial | yes/no/partial | yes/no/partial | yes/no/partial | yes/no/partial | yes/no/partial |
+
 ## Verification Performed
 - [commands, runtime checks, screenshots, logs]
 
@@ -238,6 +340,8 @@ If updating an existing audit, preserve prior findings and add status: `open`, `
 - Separate "fixed locally" from "shipped/deployed/released."
 - Use exact file and line references.
 - State confidence for each finding when evidence is incomplete.
+- Call out when tests pass but only prove storage, rendering, or happy-path mechanics rather than
+  the user/product contract.
 - Keep scope tight. If you discover adjacent product-wide risk, record it as a follow-up unless it directly breaks the audited feature.
 - Do not soften user-impacting failures. If a feature can recommend nonsense, call it a feature gap even when the algorithm is internally consistent.
 
