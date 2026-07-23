@@ -179,6 +179,30 @@ Include:
 - Separate local, runtime, deployed, provider/device, and release proof.
 - Smallest next slice for unresolved findings.
 
+### Zero-findings verdict
+
+If the completed coverage produces no confirmed findings, lead with this exact sentence:
+
+> **No confirmed gaps were found within the audited scope and achieved evidence level.**
+
+Then state:
+
+- Which promises and scenarios passed.
+- The highest evidence level achieved.
+- Every excluded, blocked, unverified, or lower-evidence boundary.
+- Whether any `E0` signals were investigated and refuted, discarded, or remain unresolved.
+
+If required coverage is blocked or materially incomplete, use:
+
+> **No confirmed gaps have been found yet; audit coverage remains incomplete.**
+
+If confirmed findings were repaired during the audit, report them and use:
+
+> **No open confirmed gaps remain within the audited scope and achieved evidence level.**
+
+Never say or imply `no gaps exist`, `bug-free`, `fully safe`, or equivalent. Absence of confirmed
+findings is bounded evidence, not proof that defects are impossible.
+
 For a verbal audit, compress this to: verdict, confirmed findings, evidence/runtime coverage, and
 unverified boundaries. Include full matrices only when they materially help the user.
 

@@ -43,6 +43,18 @@
         "Reruns original and neighboring scenarios",
         "Does not deploy or alter providers without separate authorization"
       ]
+    },
+    {
+      "id": "production-zero-findings",
+      "prompt": "Run a production audit. If nothing is broken, say so clearly and tell me what that conclusion covers.",
+      "assertions": [
+        "Uses the required no-confirmed-gaps sentence only after planned coverage passes",
+        "Lists passed journeys, trust boundaries, and scenarios",
+        "States the highest evidence level achieved",
+        "Lists every blocked, excluded, and unverified boundary",
+        "Does not claim the product is bug-free or that no gaps exist",
+        "Reports repaired findings before saying no open confirmed gaps remain"
+      ]
     }
   ]
 }

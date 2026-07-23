@@ -43,6 +43,18 @@
         "Traces relationships into readiness, prompts, exports, and proofs",
         "Tests invalid cross-scope and role-incompatible relationships"
       ]
+    },
+    {
+      "id": "feature-zero-findings",
+      "prompt": "Audit the preferences toggle feature. If it is working correctly, be explicit about that.",
+      "assertions": [
+        "Uses the required no-confirmed-gaps sentence only after planned coverage passes",
+        "Lists passed promises and scenarios",
+        "States the highest evidence level achieved",
+        "Lists every blocked, excluded, and unverified boundary",
+        "Does not claim the feature is bug-free or that no gaps exist",
+        "Uses the incomplete-coverage wording when required proof is blocked"
+      ]
     }
   ]
 }

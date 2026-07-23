@@ -205,6 +205,30 @@ Include:
 - Separate local, artifact, runtime, deployed, provider/device, and release proof.
 - Recommended remediation order.
 
+### Zero-findings verdict
+
+If the completed coverage produces no confirmed findings, lead with this exact sentence:
+
+> **No confirmed gaps were found within the audited scope and achieved evidence level.**
+
+Then state:
+
+- Which journeys, trust boundaries, and scenarios passed.
+- The highest evidence level achieved.
+- Every excluded, blocked, unverified, or lower-evidence boundary.
+- Whether any `E0` signals were investigated and refuted, discarded, or remain unresolved.
+
+If required coverage is blocked or materially incomplete, use:
+
+> **No confirmed gaps have been found yet; audit coverage remains incomplete.**
+
+If confirmed findings were repaired during the audit, report them and use:
+
+> **No open confirmed gaps remain within the audited scope and achieved evidence level.**
+
+Never say or imply `no gaps exist`, `bug-free`, `fully safe`, or equivalent. Absence of confirmed
+findings is bounded evidence, not proof that defects are impossible.
+
 For a verbal audit, compress this to: readiness verdict, confirmed findings, journey/runtime
 coverage, and exclusions or blocked proof. Include full matrices only when materially useful.
 
