@@ -1,0 +1,48 @@
+{
+  "skill_name": "feature-gap-auditor",
+  "evals": [
+    {
+      "id": "feature-runtime",
+      "prompt": "Audit the notification scheduling feature in this mobile app. I want to know whether changing the time really persists and reschedules correctly after restart.",
+      "assertions": [
+        "Keeps scope on notification scheduling and its direct dependencies",
+        "Defines falsifiable persistence and scheduling promises",
+        "Traces UI, state, persistence, native scheduling, and refresh behavior",
+        "Requires controlled runtime scenarios for restart and schedule replacement",
+        "Separates simulator, physical-device, and real-delivery proof"
+      ]
+    },
+    {
+      "id": "feature-audit-only",
+      "prompt": "Can you audit whether our checkout entitlement screen is actually working?",
+      "assertions": [
+        "Defaults to read-only audit mode",
+        "Does not implement fixes without explicit repair authorization",
+        "Checks client display against authoritative entitlement state",
+        "Exercises failure, pending, cancelled, refunded, and account-switch states",
+        "Reports severity, confidence, and evidence level separately"
+      ]
+    },
+    {
+      "id": "feature-repair",
+      "prompt": "Audit the profile save flow, fix every confirmed Critical or High issue, and prove the fixes.",
+      "assertions": [
+        "Enters audit-and-repair mode",
+        "Reproduces each issue before editing",
+        "Adds a regression oracle before or with the fix",
+        "Reruns the original failure scenario after the fix",
+        "Distinguishes fixed locally from deployed or released"
+      ]
+    },
+    {
+      "id": "feature-domain",
+      "prompt": "Audit whether our legal case contacts feature correctly models clients, opposing parties, counsel, witnesses, and the court.",
+      "assertions": [
+        "Loads the domain-contract guidance",
+        "Separates entities, roles, relationships, perspective, and neutral actors",
+        "Traces relationships into readiness, prompts, exports, and proofs",
+        "Tests invalid cross-scope and role-incompatible relationships"
+      ]
+    }
+  ]
+}

@@ -1,153 +1,93 @@
-# Detection Patterns by Language
+# Candidate Search Patterns
 
-Search/regex patterns used during Phase 2 of the production gap audit. Load this file once
-Phase 1.2 has detected the stack, then pull only the sections relevant to that stack.
+Use searches only to generate `E0` candidates. Trace reachability and user impact before reporting
+anything.
 
-Each section below mirrors a Phase 2 subsection (2.1–2.9). Within each section:
-- **Generic patterns** apply across most languages (or are language-agnostic enough to try first).
-- **Language-specific** patterns are keyed by language and should only be used when that
-  language is present in the codebase.
+Prefer the deterministic scanner:
 
----
-
-## 2.1 Silent Failures
-
-**Generic patterns (JavaScript/TypeScript):**
-```
-catch\s*\([^)]*\)\s*\{[\s]*\}
-catch\s*\([^)]*\)\s*\{\s*console\.(log|warn|error)
-\.catch\(\s*\(\)\s*=>
-\.catch\(\s*console\.(log|warn|error)\s*\)
+```bash
+python3 <skill-dir>/scripts/scan_candidates.py <repo-root> --format text
 ```
 
-**Language-specific:**
-- **Python**: `except:\s*pass`, `except Exception.*:\s*(pass|continue)`, `except.*:\s*logging\.(warn|error|info)`
-- **Go**: `_ = `, `err\s*=.*\n[^i]` (error assigned but next line isn't `if err`), `//\s*nolint`
-- **Rust**: `\.unwrap\(\)` in non-test files, `let _ =`, `\.ok\(\)` discarding errors
-- **Java/Kotlin**: `catch\s*\([^)]*\)\s*\{\s*\}`, `catch\s*\([^)]*\)\s*\{\s*//`, `@SuppressWarnings`
-- **Ruby**: `rescue\s*=>?\s*nil`, `rescue\s*StandardError`, `rescue\s*Exception`
+It excludes dependency, generated, build, fixture, snapshot, and test trees by default. Pass
+`--include-tests` only when auditing test semantics.
 
----
+## Safe fallback searches
 
-## 2.2 Incomplete Implementations
+Use `rg` with explicit file scopes and exclusions. These commands avoid unsupported lookarounds.
 
-**Generic patterns:**
-```
-TODO|FIXME|HACK|XXX|NOCOMMIT|STOPSHIP
-lorem ipsum|placeholder|test@example\.com|changeme|CHANGEME|your-api-key|sk-xxx|pk_test
-```
-
-**Language-specific:**
-- **JavaScript/TypeScript**: `throw new Error\(.*not.implemented`, `return.*\/\/\s*TODO`
-- **Python**: `raise NotImplementedError`, `pass\s*#\s*TODO`, `def.*:\s*\.\.\.\s*$`
-- **Go**: `panic\("not implemented"\)`, `// TODO`, `func.*\{\s*return nil\s*\}`
-- **Rust**: `todo!\(\)`, `unimplemented!\(\)`, `panic!\("not implemented"\)`
-- **Java/Kotlin**: `throw.*UnsupportedOperationException`, `throw.*NotImplementedException`
-
----
-
-## 2.3 Integration Gaps
-
-**Generic patterns:**
-```
-process\.env\.\w+|os\.environ|os\.getenv|env::var|System\.getenv
-fetch\(|axios\.|httpClient\.|\.get\(|\.post\(|\.put\(|\.delete\(|\.patch\(
-\.emit\(|\.on\(|addEventListener|removeEventListener|\.dispatch\(
-webhook|callback.*url|redirect.*uri|oauth.*callback
+```bash
+rg -n -U --pcre2 'catch\s*\([^)]*\)\s*\{\s*\}|\.catch\s*\(\s*\(\s*\)\s*=>\s*\{\s*\}\s*\)' src app lib server
+rg -n 'TODO|FIXME|HACK|XXX|NOCOMMIT|STOPSHIP|NotImplemented|not implemented' src app lib server
+rg -n 'fallback|default|stale|retry|timeout|rollback|reconcile|idempot|dedup' src app lib server
+rg -n 'isLoading|loading|spinner|pending|disabled|empty state|Something went wrong' src app
+rg -n 'localStorage|Access-Control-Allow-Origin|allowOrigin|skipAuth|noAuth|AllowAnonymous|rate.?limit' src app server
+rg -n 'setInterval|setTimeout|addEventListener|subscribe|WebSocket|useEffect' src app lib server
+rg -n 'process\.env|import\.meta\.env|os\.environ|os\.getenv|env::var|System\.getenv' .
+rg -n 'webhook|callback|redirect_uri|redirectUri|oauth|deep.?link|notification|entitlement|permission' src app server
 ```
 
-**Language-specific:** none — patterns above cover most ecosystems via env-var and HTTP-client conventions.
+Adjust directories to the repository. Exclude `node_modules`, vendored code, generated output,
+coverage, snapshots, fixtures, and build directories.
 
----
+## Language-specific candidates
 
-## 2.4 State & Data Integrity
+### JavaScript and TypeScript
 
-**Generic patterns:**
-```
-optimistic|\.update\(|\.set\(.*\).*(?!rollback|revert|catch)
-setInterval|setTimeout
-\.subscribe\(|\.on\(|addEventListener
-cache|Cache|memo|Memo|staleTime|cacheTime|ttl|TTL
-transaction|BEGIN|COMMIT|ROLLBACK
-ON DELETE (SET NULL|NO ACTION|RESTRICT)
+```bash
+rg -n -U --pcre2 'catch\s*\([^)]*\)\s*\{\s*(?:console\.(?:log|warn|error)\([^;]*\);?\s*)?\}' src app server
+rg -n 'Promise\.all|forEach\(.*async|map\(.*async|void [A-Za-z_$].*\(' src app server
+rg -n 'useEffect|addEventListener|removeEventListener|subscribe|unsubscribe|AbortController' src app
 ```
 
-**Language-specific:**
-- **React**: `useState.*set.*fetch` (state set before async completes), `useEffect` without cleanup return
-- **Python**: `with db.session` without `commit()`/`rollback()`, missing `finally` blocks
-- **Go**: goroutines writing to shared state without mutex/channels
+Read the whole function. Logging-only catches can still update state or deliberately isolate optional
+telemetry. Async collection patterns are not automatically incorrect.
 
----
+### Python
 
-## 2.5 User Experience Black Holes
-
-**Generic patterns:**
-```
-loading|isLoading|spinner|pending|isFetching
-empty.*state|no.*results|no.*data|no.*items
-Something went wrong|An error occurred|Unknown error|Unexpected error
-disabled={true}|\.disabled\s*=\s*true|aria-disabled
+```bash
+rg -n -U --pcre2 'except(?:\s+[^:\n]+)?\s*:\s*(?:#.*\n\s*)?pass\b' .
+rg -n 'NotImplementedError|TODO|FIXME|session\.commit|session\.rollback|transaction' .
 ```
 
-**Language-specific:** none — these are mostly UI-framework agnostic string matches.
+### Go
 
----
-
-## 2.6 Security Theater
-
-**Generic patterns:**
-```
-Access-Control-Allow-Origin.*\*
-localStorage\.(set|get)Item.*(token|auth|session|key|secret|jwt|credential)
-cors\(\s*\)|cors\(\{|allowOrigin|allow_origin
-@Public|isPublic|skipAuth|noAuth|AllowAnonymous|permit_all
-rate.?limit|throttle|RateLimit
-innerHTML\s*=|v-html|safe\|
+```bash
+rg -n 'TODO|FIXME|panic\("not implemented"\)|_\s*=\s*[^=]' --glob '*.go'
+rg -n 'go func|defer |context\.WithTimeout|BeginTx|Rollback|Commit' --glob '*.go'
 ```
 
-**Language-specific:** none — auth/CORS/rate-limit primitives are similar across stacks.
+Never infer an ignored error from proximity alone; read the containing statement and control flow.
 
----
+### Rust
 
-## 2.7 Performance Traps That Affect Behavior
-
-**Generic patterns:**
-```
-SELECT \*|SELECT.*FROM(?!.*LIMIT)(?!.*WHERE)
-\.find\(\s*\)|\.findAll\(\s*\)|\.all\(\s*\)|\.list\(\s*\)
-for.*await|\.forEach\(.*await|\.map\(.*await
-setInterval|setTimeout|new WebSocket|\.connect\(
+```bash
+rg -n 'todo!\(|unimplemented!\(|let _ =|\.ok\(\)|\.unwrap\(\)' --glob '*.rs'
+rg -n 'transaction|commit|rollback|spawn|timeout' --glob '*.rs'
 ```
 
-**Language-specific:**
-- **Python/Django/SQLAlchemy**: `.all()` without `.limit()`, `for obj in queryset` (lazy eval in loop)
-- **Go**: unbuffered channels in loops, `defer` inside loops
-- **Ruby/Rails**: `.each` on ActiveRecord relation without `.find_each` or `.in_batches`
+Exclude tests before judging `unwrap()`.
 
----
+### Java and Kotlin
 
-## 2.8 Observability & Monitoring Gaps
-
-**Generic patterns:**
-```
-sentry|bugsnag|datadog|newrelic|errorTracking|captureException|captureMessage
-structlog|winston|pino|bunyan|log4j|slog|tracing::
-health|healthz|readiness|liveness|ping
-correlation.?id|request.?id|trace.?id|x-request-id
+```bash
+rg -n -U --pcre2 'catch\s*\([^)]*\)\s*\{\s*\}' --glob '*.java' --glob '*.kt'
+rg -n 'UnsupportedOperationException|NotImplementedException|TODO|FIXME' --glob '*.java' --glob '*.kt'
 ```
 
-**Language-specific:** none — observability libraries above span the major ecosystems.
+### Swift
 
----
-
-## 2.9 API Contract Validation
-
-**Generic patterns:**
-```
-interface.*Response|type.*Response|schema|Schema
-openapi|swagger|graphql|\.graphql
-\.json\(\)|\.data\.|response\.data|res\.json
-status.*===.*200|response\.ok|res\.status
+```bash
+rg -n 'try\?|try!|fatalError\(|TODO|FIXME|Task\s*\{|NotificationCenter|Timer\.' --glob '*.swift'
+rg -n '@AppStorage|UserDefaults|Keychain|scenePhase|onOpenURL|UNUserNotificationCenter' --glob '*.swift'
 ```
 
-**Language-specific:** none — most contract patterns are framed in terms of HTTP/JSON conventions.
+### SQL and schemas
+
+```bash
+rg -n 'ON DELETE|FOREIGN KEY|REFERENCES|BEGIN|COMMIT|ROLLBACK|CREATE INDEX|UNIQUE' --glob '*.sql'
+rg -n 'SELECT \*' --glob '*.sql'
+```
+
+Do not claim an unbounded query merely because a SQL line lacks `LIMIT`; inspect the full query,
+caller constraints, cursor/pagination strategy, and dataset bounds.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Production Gap Auditor"
+  short_description: "Find and verify whole-product production gaps"
+  default_prompt: "Use $production-gap-auditor to run a risk-weighted production audit with runtime evidence."

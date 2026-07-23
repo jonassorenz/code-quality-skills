@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Gap Auditor"
+  short_description: "Verify one feature from source through runtime"
+  default_prompt: "Use $feature-gap-auditor to audit this feature end to end and verify its user-facing promises."

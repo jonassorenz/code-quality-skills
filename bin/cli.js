@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 // Cross-agent installer for code-quality-skills.
 // Usage:
-//   npx github:bumpkingsol/code-quality-skills install <skill> [--agent <a>] [--scope <s>]
-//   npx github:bumpkingsol/code-quality-skills install-all [--agent <a>] [--scope <s>]
-//   npx github:bumpkingsol/code-quality-skills list
-//   npx github:bumpkingsol/code-quality-skills agents
+//   npx github:jonassorenz/code-quality-skills install <skill> [--agent <a>] [--scope <s>]
+//   npx github:jonassorenz/code-quality-skills install-all [--agent <a>] [--scope <s>]
+//   npx github:jonassorenz/code-quality-skills list
+//   npx github:jonassorenz/code-quality-skills agents
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const https = require('https');
 
-const REPO = 'bumpkingsol/code-quality-skills';
+const REPO = 'jonassorenz/code-quality-skills';
 const BRANCH = 'main';
 
 // canonical skill name -> repo subdirectory
@@ -31,13 +31,32 @@ const ALIASES = {
 };
 
 const EXTRA_FILES = {
-  'production-gap-auditor': ['references/patterns-by-language.md'],
+  'feature-gap-auditor': [
+    'agents/openai.yaml',
+    'references/domain-contracts.md',
+    'references/evidence-and-repair.md',
+    'references/runtime-verification.md',
+  ],
+  'production-gap-auditor': [
+    'agents/openai.yaml',
+    'references/evidence-and-repair.md',
+    'references/patterns-by-language.md',
+    'references/platform-risk-checklists.md',
+    'references/runtime-verification.md',
+    'scripts/scan_candidates.py',
+  ],
   'slop-remover': ['references/agent-prompts.md'],
 };
+
+const RUNTIME_ONLY_SKILLS = new Set([
+  'feature-gap-auditor',
+  'production-gap-auditor',
+]);
 
 // agent -> { user: absolute-ish path, project: relative path }
 const AGENTS = {
   claude:  { user: '~/.claude/skills',  project: '.claude/skills'  },
+  agents:  { user: '~/.agents/skills',  project: '.agents/skills'  },
   gemini:  { user: '~/.gemini/skills',  project: '.gemini/skills'  },
   codex:   { user: '~/.codex/skills',   project: '.codex/skills'   },
   cursor:  { user: '~/.cursor/skills',  project: '.cursor/skills'  },
@@ -119,14 +138,21 @@ async function installOne(skillName, agent, scope) {
     const targetFile = path.join(targetDir, file);
     fs.mkdirSync(path.dirname(targetFile), { recursive: true });
     fs.writeFileSync(targetFile, content);
+    if (file.startsWith('scripts/')) fs.chmodSync(targetFile, 0o755);
   }
 
-  // best-effort fetch README too
-  try {
-    const readme = await readRepoText(dir, 'README.md');
-    fs.writeFileSync(path.join(targetDir, 'README.md'), readme);
-  } catch {
-    // skills without READMEs are fine
+  const legacyReadme = path.join(targetDir, 'README.md');
+  if (RUNTIME_ONLY_SKILLS.has(skillName)) {
+    // These packages keep all runtime guidance in SKILL.md and referenced resources.
+    if (fs.existsSync(legacyReadme)) fs.rmSync(legacyReadme);
+  } else {
+    // Preserve existing installer behavior for unrelated skills.
+    try {
+      const readme = await readRepoText(dir, 'README.md');
+      fs.writeFileSync(legacyReadme, readme);
+    } catch {
+      // Skills without READMEs are fine.
+    }
   }
 
   console.log(`✓ Installed ${skillName} → ${targetDir}`);

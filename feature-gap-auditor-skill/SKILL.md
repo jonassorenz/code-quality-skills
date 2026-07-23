@@ -1,359 +1,202 @@
 ---
 name: feature-gap-auditor
 description: >
-  Performs deep audits of a specific feature, capability, screen, workflow, or user promise to
-  find gaps between what the feature appears to offer and what it actually delivers. Use this
-  skill whenever the user asks to audit a feature, inspect whether a feature is actually working,
-  investigate suspicious product logic, probe edge cases, validate a core feature, find feature
-  gaps, compare claimed behavior to real behavior, or dig into one area instead of the whole
-  product. Trigger on phrases like "audit this feature", "is this feature actually working?",
-  "dig deeper into this flow", "feature gap", "logic behind this", "does this make sense for
-  users?", "what else like this is broken?", or when a screenshot/output suggests product logic
-  may be technically valid but user-invalid.
+  Audits one named feature, screen, workflow, calculation, integration, or user promise by
+  tracing its real execution path and, when observable at runtime, exercising it with browser,
+  simulator, device, API, or harness automation. Use for "audit this feature", "is this flow
+  actually working?", feature-gap investigations, suspicious product logic, claimed-vs-actual
+  behavior, and requests to audit and fix one bounded capability. Prefer production-gap-auditor
+  for a broad whole-product or production-readiness sweep.
 ---
 
 # Feature Gap Auditor
 
-You are performing a feature gap audit. Your job is to find where one specific feature fails to
-deliver its promise to a real user, even if the code compiles, tests pass, and each local function
-looks reasonable in isolation.
+Find where one specific feature betrays its promise to a real user. Treat static inspection as
+candidate generation and runtime evidence as the standard for user-visible behavior.
 
-This is narrower than a production gap audit. Do not sweep the whole product unless the feature
-requires it. Stay anchored to the named feature, workflow, screen, recommendation, calculation,
-integration, or user-facing promise.
+## Operating Contract
 
-Think like a user and product owner first, then like an engineer. A user does not care that a
-weighted average or API response is technically valid. They care whether the result is sensible,
-fresh, explainable, recoverable, and aligned with their situation.
+1. Keep scope anchored to the named feature and its direct dependencies.
+2. Default to **Audit mode**: inspect and report without changing code.
+3. Enter **Audit-and-repair mode** only when the user explicitly asks to fix, implement, resolve,
+   or get the confirmed findings sorted.
+4. Never claim runtime, deployed, provider, device, or release proof from source inspection alone.
+5. Prefer fewer reproduced findings over a long list of pattern matches.
 
-The core question: **What promise does this feature make, and where can that promise break?**
+Read [evidence-and-repair.md](references/evidence-and-repair.md) for the required evidence ladder,
+finding states, severity rules, and repair loop.
 
----
+Read [runtime-verification.md](references/runtime-verification.md) whenever the promise is visible
+or behaviorally observable in a UI, API, background job, notification, provider, or native
+integration. Runtime verification is required for runtime claims; it is not an optional polish
+step.
 
-## Phase 1: Define Feature Contract
+Read [domain-contracts.md](references/domain-contracts.md) only when the feature models regulated
+or relationship-heavy concepts such as legal roles, medical relationships, financial ownership,
+permissions, entitlements, representation, provenance, or generated trust surfaces.
 
-Before reading implementation details, establish what the feature is supposed to do.
+## Phase 1: Define the Feature Contract
 
-### 1.1 Identify the feature boundary
+### Establish the boundary
 
-Write down, in your thinking:
-- Feature name or capability being audited.
-- User intent: what the user is trying to accomplish.
-- Product promise: what the UI, copy, docs, onboarding, or surrounding architecture implies.
-- Entry points: screens, buttons, routes, notifications, background jobs, API endpoints, CLI commands.
-- Output surfaces: UI cards, recommendations, alerts, persisted settings, sync state, emails, reports.
-- Users affected: first-time users, power users, paid users, admins, partners, shift workers, missing-data users, etc.
+Record in the report or working audit artifact:
 
-If the feature boundary is ambiguous, choose the narrowest useful slice and state that assumption.
+- Feature name and narrow scope.
+- User intent and expected outcome.
+- Entry points and output surfaces.
+- Direct UI, state, service, persistence, job, provider, and export dependencies.
+- Relevant user states, roles, entitlements, permissions, locales, and devices.
+- Explicit exclusions.
 
-### 1.2 Read local guidance first
+If the request is ambiguous, choose the narrowest useful slice and state the assumption. Do not
+expand into a whole-product sweep.
 
-Read relevant local instructions before auditing:
-- Root `AGENTS.md`
-- Nearest subdirectory `AGENTS.md`
-- Feature docs, specs, flow inventories, README, route docs, API contracts
-- Existing audit or readiness docs if directly relevant
+### Read product truth
 
-For Sonopeace specifically, inspect `docs/flows.json`, `docs/app-features.md`, and harness/readiness docs when a user-visible mobile/admin flow is involved.
+Read repository instructions first, then relevant specs, UI copy, onboarding, routes, API
+contracts, schemas, tests, release/readiness docs, and recent changes. Treat contradictions
+between docs, UI, tests, and implementation as a contract ambiguity; do not silently select the
+most convenient source.
 
-### 1.3 Build a feature promise checklist
+For Sonopeace mobile or admin flows, inspect `docs/flows.json`, `docs/app-features.md`, and the
+applicable harness/readiness guidance when present.
 
-Extract 5-15 concrete promises from docs, UI copy, tests, types, and code structure. Good checklist items are specific:
-- "User sees a bedtime target only when enough data supports it."
-- "Setting saves and survives restart."
-- "Connected wearable state matches provider reality."
-- "Notification fires at the chosen local time."
-- "Payment state cannot show active access until entitlement is real."
+### Build a promise checklist
 
-This checklist drives the rest of the audit.
+Extract 5-15 concrete, falsifiable promises with their sources. Include persistence, freshness,
+permissions, failure recovery, and downstream use where applicable. Example:
 
-### 1.4 Identify the domain model and relationship contract
+> A saved notification time survives restart and replaces the previously scheduled notification.
 
-For features that model real-world roles, legal/medical/financial/accounting concepts, permissions,
-entitlements, ownership, workflow state, or regulated user promises, explicitly map the domain
-relationships before trusting the UI.
+Every later finding and verification scenario must map to at least one promise.
 
-Write down:
-- Primary entities: the things that actually exist in the user's world.
-- Roles vs entities: which labels are attributes, which are standalone records, and which are
-  relationships between records.
-- Required relationships: ownership, representation, client/opponent, payer/beneficiary,
-  guardian/dependent, provider/patient, admin/member, source/derived output, or similar.
-- Perspective: who the product is acting for, speaking to, optimizing for, or protecting.
-- Neutral/third-party actors: courts, witnesses, auditors, support staff, regulators, processors,
-  or observers that must not be treated as ordinary primary entities.
-- Valid unresolved states: what can be draft/unknown, what must block readiness/export/action, and
-  what must be marked clearly to the user.
-
-If the feature collapses different real-world concepts into one enum, table, picker, string field,
-or generic "party/user/item" list, treat that as a high-risk area until proven otherwise.
-
----
-
-## Phase 2: Trace Real Execution Path
-
-Trace the feature end to end. Do not infer from names.
+## Phase 2: Trace the Real Execution Path
 
 For each entry point:
-1. Start at user action or background trigger.
-2. Follow UI state, handlers, stores/hooks/services, API calls, persistence, background work, and display refresh.
-3. Identify source of truth for every important value.
-4. Identify stale/cache/fallback behavior.
-5. Identify permissions, entitlements, feature flags, provider state, and environment requirements.
-6. Identify recovery path when something fails.
-7. Trace the same value through every trust boundary: creation, edit screens, persistence,
-   validation, derived status, prompts/AI calls, background jobs, exports/reports, audit logs,
-   readiness/proof fingerprints, and tests.
 
-Use `rg` aggressively. Read immediate callers and consumers before making claims.
+1. Start at the user action, system event, or background trigger.
+2. Follow UI state, handlers, stores, services, API calls, persistence, jobs, provider calls, and
+   the eventual refresh or output.
+3. Identify the authoritative source for every material value.
+4. Trace fallback, cache, invalidation, retry, timeout, cancellation, and reconciliation behavior.
+5. Trace permissions, authentication, ownership, entitlements, flags, environment, and version
+   gates.
+6. Trace the same value through edit surfaces, validation, derived state, prompts or automation,
+   exports, audit logs, proofs/fingerprints, and tests.
+7. Identify the user's recovery path for every failure boundary.
 
-Useful searches:
-```bash
-rg -n "featureName|screen title|button text|field_name|apiEndpoint" .
-rg -n "catch|fallback|default|stale|isLoading|setTimeout|retry|TODO|FIXME|mock|placeholder" relevant/path
-rg -n "enabled|flag|premium|entitlement|permission|auth|role|policy" relevant/path
-rg -n "role|type|kind|status|relationship|owner|client|side|represents|represented|belongsTo|parentId|sourceId" relevant/path
-rg -n "fingerprint|proof|ready|complete|validated|export|manifest|prompt|AI|copyBlock|audit" relevant/path
-```
+Use repository search tools such as `rg` to locate terms, then read immediate callers and
+consumers. A search hit is never a finding by itself.
 
----
+## Phase 3: Generate and Rank Candidates
 
-## Phase 3: Find Feature Gaps
+Probe for broken promises in these categories:
 
-Look for feature-specific broken promises. Each candidate must be traced to what a real user sees.
+- Invalid or misleading product logic.
+- Collected context or settings that do not affect the result.
+- Missing-data defaults presented as real or personalized data.
+- Stale state after mutation, restart, sign-out, account switch, disconnect, or revocation.
+- Frontend/backend/provider contract mismatches.
+- Optimistic success without rollback or reconciliation.
+- Loading, empty, error, cancellation, and retry dead ends.
+- Permission, ownership, entitlement, or feature-flag mismatches.
+- Notification, background, deep-link, lifecycle, timezone, locale, unit, and DST failures.
+- Missing observability on critical transitions.
+- Tests that prove serialization or happy paths while accepting a false product contract.
+- Domain, perspective, provenance, or derived trust-surface failures when applicable.
 
-### 3.1 Invalid product logic
+Rank candidates by:
 
-Code produces valid data that is nonsensical for the user:
-- Recommendations at impossible times or impossible amounts.
-- Scores, debt, targets, or statuses with fake precision.
-- Weighted averages that ignore schedule, context, locale, timezone, DST, currency, units, or user type.
-- Confidence labels that reflect number of inputs instead of input quality.
-- "Best" language applied to low-confidence or stale data.
+`impact × likelihood × reach × irreversibility × evidence strength`
 
-### 3.2 Missing context and personalization
+Discard or retain as `E0 candidate` anything not traced to a concrete user-visible or operational
+impact.
 
-Feature claims personalization but uses generic fallback:
-- Default values presented as user-specific guidance.
-- Missing health/provider data treated as zero or normal.
-- Onboarding answers collected but not used.
-- Settings exist but do not influence output.
-- Shift, travel, accessibility, locale, or edge schedules ignored.
+## Phase 4: Build and Execute the Scenario Matrix
 
-### 3.3 State and freshness gaps
+Create scenarios from the promise checklist before declaring the feature reliable. Select every
+applicable row from [runtime-verification.md](references/runtime-verification.md), including:
 
-Feature state lies or drifts:
-- Cached value survives after source changes.
-- Store persists stale state across sign-out, account switch, provider disconnect, or app restart.
-- Data refresh happens only on mount, not after relevant mutations.
-- "Connected", "active", "synced", or "ready" shown without live/proven source.
-- Optimistic UI has no rollback or reconciliation.
+- First use or empty state.
+- Happy path.
+- Invalid or partial input.
+- Slow, failed, and offline dependencies.
+- Retry, duplicate submission, and concurrency.
+- Reload, restart, background/resume, and upgrade.
+- Sign-out, account switch, entitlement change, and permission denial/revocation.
+- Stale data and provider failure.
+- Locale, timezone, DST, units, large data, and accessibility variants.
 
-### 3.4 End-to-end integration gaps
+For each scenario, record setup, action, expected result, actual result, artifacts, cleanup, and
+status: `passed`, `failed`, `blocked`, `not applicable`, or `unverified`.
 
-Pieces exist but do not complete the feature:
-- UI calls service but result never displayed.
-- Backend returns shape UI does not expect.
-- Events emitted but no listener updates user-visible state.
-- Notification scheduled from old settings.
-- Background sync writes data but derived feature never recalculates.
-- Feature gate checks client state but server entitlement differs.
+For user-visible features, launch and exercise the product with the safest available browser,
+simulator, device, API, or repository harness. Capture screenshots or semantic UI state plus
+console, network, application, crash, or job evidence as applicable. Reset state between scenarios.
 
-### 3.5 Failure and recovery gaps
+If runtime access is unavailable, continue with source and focused test evidence, label the audit
+`static-only`, and list the exact missing proof. Do not mentally simulate a flow and call it tested.
 
-User gets stuck or misled:
-- Spinner or disabled button with no timeout/retry.
-- Errors logged but not surfaced.
-- Empty state hides backend/provider failure.
-- Partial setup looks complete.
-- Validation blocks action without explaining recovery.
-- Offline path accepts changes but never syncs or warns.
+## Phase 5: Verify Findings and Repair When Authorized
 
-### 3.6 Observability gaps
+For every reported finding:
 
-Team would not know feature is failing:
-- No structured logs around critical transitions.
-- No audit event for user-impacting state change.
-- No metric for recommendation generation, notification scheduling, sync failure, entitlement mismatch, or stale-data display.
-- Errors include sensitive data or omit diagnostic context.
+1. Trace the complete source-to-impact path.
+2. Reproduce it with the strongest safe evidence available.
+3. Record severity, confidence, and evidence level separately.
+4. Provide a deterministic regression oracle.
+5. Check whether existing tests accept the broken contract.
 
-### 3.7 Domain-model and relationship gaps
+In Audit-and-repair mode, process confirmed findings in risk order:
 
-The feature stores data, but the model cannot represent the user's real situation:
-- Real-world relationships are flattened into labels: "solicitor", "barrister", "witness",
-  "court", "client", "admin", "guardian", or "provider" are stored as peers of the thing they
-  should relate to.
-- The UI asks for a role but not "for whom", "owned by whom", "acting for whom", "paid by whom",
-  "approved by whom", or "source for what".
-- The model has an optional relationship field but no validation that the referenced record exists,
-  has the right type, or belongs to the same scope.
-- A neutral or third-party actor can be treated as an adversary, customer, owner, patient, payer,
-  account holder, or other primary actor.
-- Draft/unresolved records look complete, active, ready, or safe.
-- Legacy/default records are silently classified as "other" without a review surface before
-  downstream use.
+1. Preserve the reproduction.
+2. Add the smallest useful failing regression test or automated scenario.
+3. Implement the narrowest production-safe fix.
+4. Run blast-radius-appropriate tests, typechecks, lint, builds, and migrations.
+5. Rerun the original scenario and relevant neighboring scenarios.
+6. Update the finding to the exact proven state, such as `fixed locally` or
+   `runtime-verified locally`.
 
-This is a feature gap even when CRUD works and the database schema is internally consistent.
+Do not mutate live data, execute real payments or outbound messages, alter external providers, or
+deploy unless the user has explicitly authorized that action.
 
-### 3.8 Perspective and side-of-record gaps
+## Phase 6: Report
 
-The feature cannot answer whose side it is on:
-- The app stores a client/user/account/member but does not link that person/entity to the thing the
-  feature is acting on.
-- The product collects persona, role, or onboarding context but does not connect it to the feature's
-  source of truth.
-- Recommendations, drafts, alerts, summaries, or workflow actions omit whether they are for the user,
-  the counterparty, a dependent, a client, an admin, or a neutral reviewer.
-- "Supporting", "opposing", "recommended", "risk", "ready", or "complete" is displayed without
-  specifying the relevant perspective.
-- The same data could be correct for one side and harmful for another.
+Use the repository's audit convention when one exists. Otherwise write
+`feature-gap-audit-[feature-slug].md` only when the user requested or would clearly benefit from a
+durable report; answer verbally when that is what they asked for.
 
-For legal/litigation workflows specifically, audit claimant/defendant or equivalent sides, client
-side, opponent side, solicitor/attorney, barrister/advocate/counsel, witness/expert, court/tribunal,
-and instructing relationships as separate concepts.
+Include:
 
-### 3.9 Derived trust-surface gaps
+- Feature contract and source conflicts.
+- Scope and explicit exclusions.
+- Scenario coverage matrix.
+- Findings with stable IDs, status, severity, confidence, evidence level, exact locations,
+  expected vs actual behavior, reproduction, root cause, regression oracle, recommendation, and
+  artifacts.
+- Claimed-vs-actual capability matrix.
+- Verification performed and not performed.
+- Separate local, runtime, deployed, provider/device, and release proof.
+- Smallest next slice for unresolved findings.
 
-The feature's raw data may be wrong or incomplete, but derived surfaces still treat it as safe:
-- Completeness or readiness checks count "any value present" instead of "valid value for the
-  user's workflow".
-- Proofs, fingerprints, cache keys, ETags, or stale-state invalidation omit semantically material
-  fields.
-- Exports, manifests, reports, emails, copy blocks, or audit logs flatten structured relationships
-  into a comma-separated list or omit them entirely.
-- AI prompts, recommendations, scoring, or automation receive generic text but not the structured
-  context required to produce safe output.
-- Background jobs and generated artifacts persist metadata after generation, but did not provide
-  that metadata to the generator.
+For a verbal audit, compress this to: verdict, confirmed findings, evidence/runtime coverage, and
+unverified boundaries. Include full matrices only when they materially help the user.
 
-When a feature has a trust claim ("ready", "GO", "reviewed", "client-safe", "court-ready",
-"active", "verified", "synced", "complete"), trace every field that should invalidate that claim.
+## Completion Gate
 
-### 3.10 Test-suite semantic gaps
+Do not call the audit complete until:
 
-Passing tests can hide a broken feature contract:
-- Tests assert labels, serialization, CRUD, or happy-path rendering but not real-world validity.
-- Tests prove a relationship field round-trips but not that it is required, editable, role-correct,
-  or used downstream.
-- Tests assert "complete" or "ready" from minimal fixtures that would be invalid in a real workflow.
-- Prompt tests check generic instructions/source bundles but not user-specific context.
-- Export/proof tests check files exist or hashes change for obvious fields while omitting
-  relationship, perspective, permission, entitlement, or context fields.
+- Every reported finding is at least `E1 traced`; `E0` signals are excluded or clearly separated.
+- Every Critical or High finding has been independently re-read and verified.
+- Every applicable critical promise has a scenario status.
+- User-visible reliability claims have controlled runtime proof or are explicitly marked
+  `static-only`.
+- Audit-and-repair work reruns the original reproduction after the fix.
+- The report states exactly what remains unverified.
 
-If focused tests pass while the audited promise is still false, report that as evidence: "the suite
-accepts the broken contract." Recommend the smallest regression tests that would fail today.
+## Optional Parallel Work
 
----
-
-## Phase 4: Verify Before Reporting
-
-Do not report speculative gaps as facts. Verify strongest findings by reading code and, when practical, running the feature or tests.
-
-Verification options:
-- Focused unit/service/store tests.
-- Typecheck/lint for edited or inspected areas when changes are made.
-- Browser/simulator/device proof for UI, notifications, native health, payments, auth, routing, and background behavior.
-- Live database/API inspection only through sanctioned project tools and only when needed.
-- Harness/readiness commands when repository guidance requires them.
-- Negative/semantic proof: construct or identify an invalid real-world state, then verify whether
-  the feature accepts it, displays it as complete/ready, sends it into prompts/jobs, or exports it
-  without warnings.
-- Invalidation proof: change a semantically material relationship/context field and verify whether
-  caches, readiness, proofs, generated artifacts, and exports become stale or blocked.
-
-If verification is impossible, label finding as "needs runtime proof" and explain exactly what proof is missing.
-
----
-
-## Phase 5: Report
-
-Create a feature-specific audit report unless the user only asks for a verbal answer.
-
-Preferred filename:
-- `feature-gap-audit-[feature-slug].md` in project root, or
-- project convention path such as `docs/audits/feature-gap-audit-[feature-slug].md` when audits already live there.
-
-If updating an existing audit, preserve prior findings and add status: `open`, `partially addressed`, `refuted`, or `fixed`.
-
-### Report template
-
-```markdown
-# Feature Gap Audit: [Feature Name]
-**Date**: [date]
-**Scope**: [specific screens/services/flows audited]
-**Feature promise**: [one-sentence user-facing promise]
-
-## Executive Summary
-[2-4 sentences. Say whether feature is reliable, risky, partially working, or blocked by missing proof.]
-
-## Feature Contract
-| Promise | Expected behavior | Source |
-|---------|-------------------|--------|
-| [promise] | [expected] | [docs/UI/code/test] |
-
-## Findings
-
-### [Severity] [Finding Title]
-- **Status**: open / partially addressed / refuted / fixed
-- **Location**: `file:line`
-- **User intent**: [what user is trying to do]
-- **What happens instead**: [specific user-visible failure]
-- **Why it matters**: [business/user impact]
-- **Root cause**: [implementation or product logic issue]
-- **How to verify**: [manual or automated reproduction]
-- **Recommended fix**: [smallest production-safe fix]
-- **Evidence**: [code path, data path, screenshots, logs, test output]
-
-## Claimed vs Actual
-| Capability | Actual status | Notes |
-|------------|---------------|-------|
-| [capability] | working / partial / broken / unverified | [details] |
-
-## Domain Model / Trust Surface Matrix
-| Concept or relationship | Captured at input? | Persisted? | Editable later? | Validated? | Used in prompts/jobs? | Included in proof/export? |
-|-------------------------|--------------------|------------|-----------------|------------|-----------------------|---------------------------|
-| [entity/relationship] | yes/no/partial | yes/no/partial | yes/no/partial | yes/no/partial | yes/no/partial | yes/no/partial |
-
-## Verification Performed
-- [commands, runtime checks, screenshots, logs]
-
-## Verification Not Performed
-- [what remains unproven and why]
-
-## Recommended Next Slice
-[smallest next implementation or proof step]
-```
-
-### Severity
-
-- **Critical**: Core feature promise fails, causes data loss/security exposure, or gives harmful/misleading guidance in common use.
-- **High**: Common user path produces wrong, stale, or incomplete result users will notice.
-- **Medium**: Realistic edge case breaks or feature degrades without clear recovery.
-- **Low**: Latent risk, weak observability, unclear copy, or unlikely edge case.
-
----
-
-## Output Rules
-
-- Lead with findings, not process.
-- Separate "code appears correct" from "feature is proven in runtime."
-- Separate "fixed locally" from "shipped/deployed/released."
-- Use exact file and line references.
-- State confidence for each finding when evidence is incomplete.
-- Call out when tests pass but only prove storage, rendering, or happy-path mechanics rather than
-  the user/product contract.
-- Keep scope tight. If you discover adjacent product-wide risk, record it as a follow-up unless it directly breaks the audited feature.
-- Do not soften user-impacting failures. If a feature can recommend nonsense, call it a feature gap even when the algorithm is internally consistent.
-
----
-
-## When To Use Subagents
-
-Use subagents when the feature spans multiple independent surfaces:
-- UI/screen agent
-- Store/state agent
-- Backend/API/database agent
-- Native/integration agent
-- Test/evidence agent
-
-After subagents report, verify important claims yourself by reading code. Deduplicate findings. Prefer fewer, well-proven findings over a long list of pattern matches.
+Use subagents only when permitted and when UI, state, backend, native/provider, and test surfaces
+can be investigated independently. Give each agent a bounded surface and raw artifacts. Verify all
+Critical and High claims yourself, deduplicate root causes, and preserve one authoritative coverage
+matrix.

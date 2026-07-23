@@ -1,14 +1,14 @@
 # Code Quality Skills
 
-A collection of Claude Code skills for code quality and audits — diagnosing issues, ensuring compliance, and cleaning up codebases.
+A cross-agent collection of production-focused code quality, runtime QA, and audit skills.
 
 ## Included Skills
 
 | Skill | Description |
 |-------|-------------|
 | `slop-remover` | Deep code-quality cleanup for duplication, types, dead code, circular deps, legacy paths, and AI slop |
-| `production-gap-auditor` | Production-readiness audit for gaps tests miss: silent failures, broken flows, data integrity, auth, UX, and integration issues |
-| `feature-gap-auditor` | Focused audit of one feature, workflow, screen, or user promise to find claimed-vs-actual behavior gaps |
+| `production-gap-auditor` | Risk-weighted whole-product audit with static tracing, runtime scenarios, evidence levels, and optional verified repair |
+| `feature-gap-auditor` | Deep audit of one feature promise from source through controlled runtime, with optional verified repair |
 | `compliance-audit` | GDPR/HIPAA/privacy audit for consent, PHI/PII, retention, erasure, portability, breach, and user-data handling |
 | `dead-code-removal` | Conservative dead-code removal for unused imports, functions, files, unreachable code, and pruning sweeps |
 | `whats-wrong` | Focused subsystem diagnosis for auth, payments, notifications, search, onboarding, and similar product areas |
@@ -39,25 +39,25 @@ npx code-quality-skills install complexity-audit --scope project
 npx code-quality-skills install-all --agent claude
 ```
 
-**Supported agents:** `claude`, `gemini`, `codex`, `cursor`, `copilot`
+**Supported agents:** `claude`, `agents`, `gemini`, `codex`, `cursor`, `copilot`
 **Scopes:** `user` (default, global) or `project` (local `.{agent}/skills/`)
 
 > Prefer not to install from npm? The same CLI runs directly from GitHub:
-> `npx github:bumpkingsol/code-quality-skills install <skill>`
+> `npx github:jonassorenz/code-quality-skills install <skill>`
 
 ### Install via Claude Code CLI
 
 For Claude Code specifically, you can also use the bundled `.skill` packages:
 
 ```bash
-claude install-skill https://raw.githubusercontent.com/bumpkingsol/code-quality-skills/main/bug-hunter-skill/bug-hunter.skill
-claude install-skill https://raw.githubusercontent.com/bumpkingsol/code-quality-skills/main/cleanup-skill/dead-code-removal.skill
-claude install-skill https://raw.githubusercontent.com/bumpkingsol/code-quality-skills/main/complexity-audit-skill/complexity-audit.skill
-claude install-skill https://raw.githubusercontent.com/bumpkingsol/code-quality-skills/main/compliance-audit-skill/compliance-audit.skill
-claude install-skill https://raw.githubusercontent.com/bumpkingsol/code-quality-skills/main/feature-gap-auditor-skill/feature-gap-auditor.skill
-claude install-skill https://raw.githubusercontent.com/bumpkingsol/code-quality-skills/main/production-gap-auditor-skill/production-gap-auditor.skill
-claude install-skill https://raw.githubusercontent.com/bumpkingsol/code-quality-skills/main/slop-remover-skill/slop-remover.skill
-claude install-skill https://raw.githubusercontent.com/bumpkingsol/code-quality-skills/main/whats-wrong-skills/whats-wrong.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/bug-hunter-skill/bug-hunter.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/cleanup-skill/dead-code-removal.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/complexity-audit-skill/complexity-audit.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/compliance-audit-skill/compliance-audit.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/feature-gap-auditor-skill/feature-gap-auditor.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/production-gap-auditor-skill/production-gap-auditor.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/slop-remover-skill/slop-remover.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/whats-wrong-skills/whats-wrong.skill
 ```
 
 ### Manual install
@@ -67,9 +67,10 @@ Each subdirectory is a standalone skill. Copy the skill's folder into your agent
 | Agent | User scope | Project scope |
 |-------|------------|---------------|
 | Claude Code | `~/.claude/skills/<name>/` | `.claude/skills/<name>/` |
+| Agents-compatible | `~/.agents/skills/<name>/` | `.agents/skills/<name>/` |
 | Gemini CLI | `~/.gemini/skills/<name>/` | `.gemini/skills/<name>/` |
 | Codex | `~/.codex/skills/<name>/` | `.codex/skills/<name>/` |
 | Cursor | `~/.cursor/skills/<name>/` | `.cursor/skills/<name>/` |
 | Copilot CLI | `~/.copilot/skills/<name>/` | `.copilot/skills/<name>/` |
 
-> Refer to each skill's own README for usage details.
+> Refer to each skill's `SKILL.md` for usage details.

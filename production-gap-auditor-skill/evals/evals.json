@@ -1,0 +1,48 @@
+{
+  "skill_name": "production-gap-auditor",
+  "evals": [
+    {
+      "id": "production-quick",
+      "prompt": "Run a quick production gap audit of this app. Give me the top five things that could hurt users.",
+      "assertions": [
+        "Reduces breadth to at most five high-risk candidates",
+        "Does not skip deep tracing or verification",
+        "Exercises at least one real critical journey when a runtime exists",
+        "Reports the deliberately limited coverage",
+        "Does not promote raw scanner matches to findings"
+      ]
+    },
+    {
+      "id": "production-platform",
+      "prompt": "Audit this React Native app for production readiness. Tests pass, but users report login and subscription problems after restarting the app.",
+      "assertions": [
+        "Classifies the mobile runtime before applying checks",
+        "Prioritizes authentication, account switching, persistence, and entitlement boundaries",
+        "Exercises cold start, restart, offline, expired session, and entitlement changes",
+        "Separates simulator, provider, physical-device, and release evidence",
+        "Avoids irrelevant server-only health-check findings"
+      ]
+    },
+    {
+      "id": "production-audit-only",
+      "prompt": "Audit this whole codebase for production gaps.",
+      "assertions": [
+        "Defaults to read-only audit mode",
+        "Scopes by critical journeys and trust boundaries rather than file count",
+        "Uses scanners only for E0 candidate generation",
+        "Reports explicit exclusions and unverified runtime surfaces"
+      ]
+    },
+    {
+      "id": "production-repair",
+      "prompt": "Audit the application, fix confirmed release-blocking gaps, and rerun the relevant product journeys.",
+      "assertions": [
+        "Enters audit-and-repair mode",
+        "Preserves deterministic reproductions",
+        "Adds regression oracles and narrow fixes",
+        "Reruns original and neighboring scenarios",
+        "Does not deploy or alter providers without separate authorization"
+      ]
+    }
+  ]
+}
