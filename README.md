@@ -6,14 +6,14 @@ A cross-agent collection of production-focused code quality, runtime QA, and aud
 
 | Skill | Description |
 |-------|-------------|
-| `slop-remover` | Deep code-quality cleanup for duplication, types, dead code, circular deps, legacy paths, and AI slop |
+| `declutter` | Finds and removes unnecessary code and complexity — dead code, duplication, over-abstraction, speculative generality, config/dependency rot — with verified, build-safe execution |
 | `production-gap-auditor` | Risk-weighted whole-product audit with static tracing, runtime scenarios, evidence levels, and optional verified repair |
 | `feature-gap-auditor` | Deep audit of one feature promise from source through controlled runtime, with optional verified repair |
 | `compliance-audit` | GDPR/HIPAA/privacy audit for consent, PHI/PII, retention, erasure, portability, breach, and user-data handling |
-| `dead-code-removal` | Conservative dead-code removal for unused imports, functions, files, unreachable code, and pruning sweeps |
 | `whats-wrong` | Focused subsystem diagnosis for auth, payments, notifications, search, onboarding, and similar product areas |
 | `bug-hunter` | Runtime QA that drives a live app with computer-use or browser automation and reports bugs with evidence |
-| `complexity-audit` | Complexity audit across frontend, API, backend, and database layers with prioritized simplification recommendations |
+
+> `declutter` replaces the retired `slop-remover`, `dead-code-removal`, and `complexity-audit` skills, consolidating them into a single hunt → verify → propose → execute pipeline.
 
 ## Installation
 
@@ -29,11 +29,11 @@ npx code-quality-skills list
 npx code-quality-skills install bug-hunter
 
 # Install to a different agent
-npx code-quality-skills install slop-remover --agent gemini
+npx code-quality-skills install declutter --agent gemini
 npx code-quality-skills install production-gap-auditor --agent cursor
 
 # Install to project scope instead of user scope
-npx code-quality-skills install complexity-audit --scope project
+npx code-quality-skills install declutter --scope project
 
 # Install everything
 npx code-quality-skills install-all --agent claude
@@ -51,12 +51,10 @@ For Claude Code specifically, you can also use the bundled `.skill` packages:
 
 ```bash
 claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/bug-hunter-skill/bug-hunter.skill
-claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/cleanup-skill/dead-code-removal.skill
-claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/complexity-audit-skill/complexity-audit.skill
+claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/declutter-skill/declutter.skill
 claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/compliance-audit-skill/compliance-audit.skill
 claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/feature-gap-auditor-skill/feature-gap-auditor.skill
 claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/production-gap-auditor-skill/production-gap-auditor.skill
-claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/slop-remover-skill/slop-remover.skill
 claude install-skill https://raw.githubusercontent.com/jonassorenz/code-quality-skills/main/whats-wrong-skills/whats-wrong.skill
 ```
 

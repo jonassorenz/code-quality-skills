@@ -17,17 +17,18 @@ const BRANCH = 'main';
 // canonical skill name -> repo subdirectory
 const SKILLS = {
   'bug-hunter': 'bug-hunter-skill',
-  'dead-code-removal': 'cleanup-skill',
+  'declutter': 'declutter-skill',
   'feature-gap-auditor': 'feature-gap-auditor-skill',
-  'complexity-audit': 'complexity-audit-skill',
   'compliance-audit': 'compliance-audit-skill',
   'production-gap-auditor': 'production-gap-auditor-skill',
-  'slop-remover': 'slop-remover-skill',
   'whats-wrong': 'whats-wrong-skills',
 };
 
 const ALIASES = {
-  cleanup: 'dead-code-removal',
+  cleanup: 'declutter',
+  'slop-remover': 'declutter',
+  'dead-code-removal': 'declutter',
+  'complexity-audit': 'declutter',
 };
 
 const EXTRA_FILES = {
@@ -45,7 +46,7 @@ const EXTRA_FILES = {
     'references/runtime-verification.md',
     'scripts/scan_candidates.py',
   ],
-  'slop-remover': ['references/agent-prompts.md'],
+  'declutter': ['references/hunt-playbooks.md'],
 };
 
 const RUNTIME_ONLY_SKILLS = new Set([
@@ -113,7 +114,7 @@ Scopes: user, project                  (default: user)
 
 Examples:
   npx code-quality-skills install bug-hunter
-  npx code-quality-skills install slop-remover --agent gemini
+  npx code-quality-skills install declutter --agent gemini
   npx code-quality-skills install-all --agent cursor --scope project
 `);
 }
